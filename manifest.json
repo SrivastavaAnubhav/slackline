@@ -1,0 +1,20 @@
+{
+ "manifest_version": 2,
+ "name": "Slackline",
+ "description": "Inline custom emoji support for facebook messenger.",
+ "version": "1",
+ "author": "Anubhav Srivastava",
+ "background": {
+  "scripts":["background.js"]
+ },
+ "content_scripts": [
+    {
+      "matches": ["https://www.messenger.com/t/*", "https://www.facebook.com/*"],
+      "js": ["myscript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "tabs"
+  ]
+}
