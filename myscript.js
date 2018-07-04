@@ -8,6 +8,17 @@ const messengerContainerSelector = '[aria-label="Messages"]';
 const fbMessagesSelector = ".conversationContainer";
 const messengerMessagesSelector = '[aria-label="Messages"]';
 
+function getImgUrl(emojiString) {
+	switch(emojiString) {
+		case "party-parrot-gif":
+			return "https://ph-files.imgix.net/caf5608a-67ec-4f9f-acb5-db0052c33bed";
+		case "kappa":
+			return "https://i.kym-cdn.com/photos/images/newsfeed/000/925/494/218.png_large";
+		default:
+			return "";
+	}
+}
+
 function updateImages() {
 	// http://www.javascriptkit.com/dhtmltutors/treewalker2.shtml
 	function nodeFilter(node) {
@@ -40,23 +51,33 @@ function updateImages() {
 	}
 	// console.log(messageNodeList);
 
-	const splitRegex = /(:[a-z0-9\-]+:)/gim;
+	// JavaScript regexes are stupid:
+	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
+	const splitRegex = /(:[a-z0-9-]+:)/i;
 	for (let messageNode of messageNodeList) {
 		let splitMessageText = messageNode.textContent.split(splitRegex);
-		// console.log(splitMessageText);
+
+		// If there is a match it will split into ["", :match:, ""]
+		if (splitMessageText.length == 1)
+			continue
 
 		let lastAppended = messageNode;
 		for (let messagePart of splitMessageText) {
 			if (messagePart == "")
 				continue;
 
+			let emojiUrl = "";
 			if (splitRegex.test(messagePart)) {
-				let emojiString = messagePart.substr(1, messagePart.length - 2);
-				console.log("Replacing " + emojiString);
+				emojiUrl = getImgUrl(messagePart.substr(1, messagePart.length - 2));
+				// console.log(messagePart.substr(1, messagePart.length - 2));
+			}
+
+			if (emojiUrl != "") {
+				console.log("Replacing " + messagePart.substr(1, messagePart.length - 2));
 				let newChild = document.createElement("img");
-				newChild.src = "https://ph-files.imgix.net/caf5608a-67ec-4f9f-acb5-db0052c33bed";
-				newChild.width="16";
-				newChild.height="16";
+				newChild.src = emojiUrl;
+				newChild.width = "16";
+				newChild.height = "16";
 				lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
 				lastAppended = newChild;
 			}
