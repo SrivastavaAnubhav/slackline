@@ -76,8 +76,8 @@ function updateImages() {
 				console.log("Replacing " + messagePart.substr(1, messagePart.length - 2));
 				let newChild = document.createElement("img");
 				newChild.src = emojiUrl;
-				newChild.width = "16";
-				newChild.height = "16";
+				newChild.classList.add("slacklineEmoji");
+				lastAppended.parentNode.classList.add("messageSpan");
 				lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
 				lastAppended = newChild;
 			}

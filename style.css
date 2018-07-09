@@ -1,0 +1,9 @@
+.slacklineEmoji {
+	width: 24px;
+	height: 24px;
+}
+
+.messageSpan {
+	display: inline-flex;
+	align-items: center;
+}
