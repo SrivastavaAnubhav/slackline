@@ -149,11 +149,11 @@ function waitForMessagesToLoad(messageSelector, time) {
 }
 
 function getContainerSelector() {
-	if (document.domain == "facebook.com") {
-		return fbContainerSelector;
-	}
-	else if (document.domain == "www.messenger.com") {
+	if (document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages")) {
 		return messengerContainerSelector;
+	}
+	else if (document.domain == "facebook.com") {
+		return fbContainerSelector;
 	}
 	else {
 		throw Error("Domain invalid");
@@ -161,11 +161,11 @@ function getContainerSelector() {
 }
 
 function getMessagesSelector() {
-	if (document.domain == "facebook.com") {
-		return fbMessagesSelector;
-	}
-	else if (document.domain == "www.messenger.com") {
+	if (document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages")) {
 		return messengerMessagesSelector;
+	}
+	else if (document.domain == "facebook.com") {
+		return fbMessagesSelector;
 	}
 	else {
 		throw Error("Domain invalid");
