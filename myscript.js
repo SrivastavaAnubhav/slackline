@@ -1,3 +1,4 @@
+"use strict";
 console.log("SLACKLINE LIVE");
 
 let messageElements;
@@ -9,6 +10,7 @@ const fbMessagesSelector = ".conversationContainer";
 const messengerMessagesSelector = '[aria-label="Messages"]';
 
 
+// Any changes must be duplicated into options.js
 // All keys must be lowercased
 const baseEmojiMap = new Map([
 	// Slack
@@ -47,7 +49,8 @@ const baseEmojiMap = new Map([
 	["wutface", "https://static-cdn.jtvnw.net/emoticons/v1/28087/1.0"],
 
 	// Other
-	["thonk", "https://vignette.wikia.nocookie.net/plantsvszombies/images/9/9b/Thonk.png"]
+	["thonk", "https://vignette.wikia.nocookie.net/plantsvszombies/images/9/9b/Thonk.png"],
+	["monkas", "https://i.imgur.com/VLjJHmR.png"]
 ]);
 
 function updateImages() {
@@ -88,7 +91,8 @@ function updateImages() {
 	for (let messageNode of messageNodeList) {
 		let splitMessageText = messageNode.textContent.split(splitRegex);
 
-		// If there is a match it will split into ["", :match:, ""]
+		// This doesn't miss messages that only contain a single emoji because if there is a match 
+		// it will split into ["", :match:, ""]
 		if (splitMessageText.length == 1)
 			continue
 

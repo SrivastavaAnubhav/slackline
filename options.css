@@ -1,0 +1,17 @@
+body {
+	font-size: 1rem;
+}
+
+td {
+	padding-right: 100px;
+}
+
+.content {
+	width: 50%;
+	margin: auto;
+}
+
+img {
+	height: 36px;
+	width: 36px;
+}
