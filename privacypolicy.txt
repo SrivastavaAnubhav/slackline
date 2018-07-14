@@ -1,3 +1,0 @@
-Slackline stores no facebook data other than your profile link.
-Slackline uses your profile link to make sure that only you can upload emojis to your account.
-The emojis that you upload will be stored on imgur.com (unlisted).
