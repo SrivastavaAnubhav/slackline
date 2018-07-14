@@ -131,23 +131,6 @@ function updateImages() {
 	observer.observe(container, observerConfig);
 }
 
-function waitForMessagesToLoad(messageSelector, time) {
-	messageElements = document.querySelectorAll(messageSelector);
-	if (messageElements.length != 0) {
-		// alert("The element is displayed, you can put your code instead of this alert.")
-		console.log("Messages loaded.");
-
-		observer.disconnect();
-		observer.observe(document.querySelector(getContainerSelector()), observerConfig);
-		updateImages();
-	}
-	else {
-		setTimeout(function() {
-			waitForMessagesToLoad(messageSelector, time);
-		}, time);
-	}
-}
-
 function getContainerSelector() {
 	if (document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages")) {
 		return messengerContainerSelector;
@@ -172,6 +155,23 @@ function getMessagesSelector() {
 	}
 }
 
+function waitForMessagesToLoad(messageSelector, time) {
+	messageElements = document.querySelectorAll(messageSelector);
+	if (messageElements.length != 0) {
+		// alert("The element is displayed, you can put your code instead of this alert.")
+		console.log("Messages loaded.");
+
+		observer.disconnect();
+		observer.observe(document.querySelector(getContainerSelector()), observerConfig);
+		updateImages();
+	}
+	else {
+		setTimeout(function() {
+			console.log("Searching...");
+			waitForMessagesToLoad(messageSelector, time);
+		}, time);
+	}
+}
 
 // https://stackoverflow.com/a/50548409/1890288
 chrome.runtime.onMessage.addListener(

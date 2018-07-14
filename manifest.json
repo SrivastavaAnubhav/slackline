@@ -9,7 +9,7 @@
  },
  "content_scripts": [
     {
-      "matches": ["https://www.messenger.com/t/*", "https://www.facebook.com/*"],
+      "matches": ["https://www.messenger.com/*", "https://www.facebook.com/*"],
       "css": ["style.css"],
       "js": ["myscript.js"],
       "run_at": "document_idle"
