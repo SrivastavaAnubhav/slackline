@@ -2,9 +2,7 @@
 console.log("SLACKLINE LIVE");
 
 const observerConfig = {childList: true, subtree: true};
-const fbContainerSelector = "#ChatTabsPagelet";
 const messengerContainerSelector = '[aria-label="Messages"]';
-const fbMessagesSelector = ".conversationContainer";
 const messengerMessagesSelector = '[aria-label="Messages"]';
 
 
@@ -52,9 +50,9 @@ const baseEmojiMap = new Map([
 ]);
 
 // A list of nodes, each of which is conversation with a different person
-let messageElements = [];
+let messageElement;
 let observer = new MutationObserver(observeHandler);
-let lastMessageIds;
+let lastMessageId;
 
 // function getAnubhavMichelleImg(emojiString) {
 // 	let xhr = new XMLHttpRequest();
@@ -118,6 +116,7 @@ function resolveMessageNodeList(messageNodeList) {
 				}
 			}
 
+			console.log("Emoji string: " + emojiString + ", url: " + url);
 			if (emojiString != undefined && url != undefined) {
 				console.log("Replacing " + emojiString);
 				let newChild = document.createElement("img");
@@ -162,17 +161,16 @@ function textNodesUnder(root) {
 	return nodes;
 }
 
-function resolveLatestMessage() {
+function resolveLatestMessage(latestMessage) {
 	observer.disconnect();
 	console.log("Resolving latest message.");
 
 	// A list of the actual messages
-	let messageNodeList = []
-	messageNodeList.push(...textNodesUnder[messageElements[messageElements.length - 1]]);
+	let messageNodeList = textNodesUnder(latestMessage);
 	console.log(messageNodeList);
 	resolveMessageNodeList(messageNodeList);
 
-	let container = document.querySelector(getContainerSelector());
+	let container = document.querySelector(messengerContainerSelector);
 	observer.observe(container, observerConfig);
 }
 
@@ -183,40 +181,35 @@ function resolveAll() {
 
 	// A list of the actual messages
 	let messageNodeList = [];
-	for (let i = 0; i < messageElements.length; ++i) {
-		messageNodeList.push(...textNodesUnder(messageElements[i]));
-	}
+	messageNodeList.push(...textNodesUnder(messageElement));
 
 	resolveMessageNodeList(messageNodeList);
 
-	let container = document.querySelector(getContainerSelector());
+	let container = document.querySelector(messengerContainerSelector);
 	observer.observe(container, observerConfig);
 }
 
 function observeHandler() {
-	console.log(messageElements);
-}
+	let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.firstChild.lastChild.firstChild;
 
-function isMessenger() {
-	return document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages");
-}
-
-function getContainerSelector() {
-	return isMessenger() ? messengerContainerSelector : fbContainerSelector;
-}
-
-function getMessagesSelector() {
-	return isMessenger() ? messengerMessagesSelector : fbMessagesSelector;
+	if (!lastNode.id) {
+		// Generate random id and only resolve if we haven't already
+		lastNode.id = "sl_" + Math.random().toString(36).substring(8);
+		lastMessageId = lastNode.id;
+		resolveLatestMessage(lastNode);
+	}
+	else {
+		console.log("Id " + lastNode.id + " seen");
+	}
 }
 
 function waitForMessagesToLoad(messageSelector, time) {
-	messageElements = document.querySelectorAll(messageSelector);
-	if (messageElements.length != 0) {
-		// alert("The element is displayed, you can put your code instead of this alert.")
+	messageElement = document.querySelector(messageSelector);
+	if (messageElement != null) {
 		console.log("Messages loaded.");
 
 		observer.disconnect();
-		observer.observe(document.querySelector(getContainerSelector()), observerConfig);
+		observer.observe(document.querySelector(messengerContainerSelector), observerConfig);
 		resolveAll();
 	}
 	else {
@@ -233,8 +226,8 @@ chrome.runtime.onMessage.addListener(
 	// listen for messages sent from background.js
 	if (request.message == "url_change") {
 		console.log("URL changed.");
-		waitForMessagesToLoad(getMessagesSelector(), 200);
+		waitForMessagesToLoad(messengerMessagesSelector, 200);
 	}
 });
 
-waitForMessagesToLoad(getMessagesSelector(), 200);
+waitForMessagesToLoad(messengerMessagesSelector, 200);
