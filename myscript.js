@@ -1,8 +1,6 @@
 "use strict";
 console.log("SLACKLINE LIVE");
 
-let messageElements;
-let observer = new MutationObserver(updateImages);
 const observerConfig = {childList: true, subtree: true};
 const fbContainerSelector = "#ChatTabsPagelet";
 const messengerContainerSelector = '[aria-label="Messages"]';
@@ -53,60 +51,74 @@ const baseEmojiMap = new Map([
 	["monkas", "https://i.imgur.com/VLjJHmR.png"]
 ]);
 
-function updateImages() {
-	// http://www.javascriptkit.com/dhtmltutors/treewalker2.shtml
-	function nodeFilter(node) {
-		// need span's parent to be a div so that we don't take the hidden name tag
-		if (node.parentNode.tagName == "SPAN" &&
-			(node.parentNode.parentNode.tagName == "DIV" || node.parentNode.parentNode.tagName == "SPAN") &&
-			node.textContent != "")
-			return NodeFilter.FILTER_ACCEPT;
-		else
-			return NodeFilter.FILTER_SKIP;
-	}
+// A list of nodes, each of which is conversation with a different person
+let messageElements = [];
+let observer = new MutationObserver(observeHandler);
+let lastMessageIds;
 
-	// https://stackoverflow.com/a/10730777/1890288
-	function textNodesUnder(root) {
-		let node;
-		let a = [];
-		let walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, nodeFilter, false);
-		while (node = walker.nextNode()) {
-			a.push(node);
-		}
-		return a;
-	}
+// function getAnubhavMichelleImg(emojiString) {
+// 	let xhr = new XMLHttpRequest();
+// 	xhr.open("POST", "localhost:", true);
+// 	xhr.setRequestHeader('Content-Type', 'application/json');
+// 	xhr.send(JSON.stringify({
+// 		emojiNames: ["horse", "123"],
+// 		userId: 
+// 	}));
+// }
 
-	observer.disconnect();
-	console.log("Observed event.");
-
-	let messageNodeList = [];
-	for (let i = 0; i < messageElements.length; ++i) {
-		messageNodeList.push(...textNodesUnder(messageElements[i]));
-	}
-	// console.log(messageNodeList);
-
+function resolveMessageNodeList(messageNodeList) {
 	// JavaScript regexes are stupid:
 	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
+	let queryEmojiStrings = []
 	const splitRegex = /(:[a-z0-9-]+:)/i;
+
+	for (let messageNode of messageNodeList) {
+		let splitMessageText = messageNode.textContent.split(splitRegex);
+
+		if (splitMessageText.length == 1)
+			continue;
+
+		for (let messagePart of splitMessageText) {
+			if (splitRegex.test(messagePart)) {
+				let emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
+				if (!baseEmojiMap.has(emojiString)) {
+					queryEmojiStrings.push(emojiString);
+				}
+			}
+		}
+	}
+
+	// API CALL GOES HERE
+
 	for (let messageNode of messageNodeList) {
 		let splitMessageText = messageNode.textContent.split(splitRegex);
 
 		// This doesn't miss messages that only contain a single emoji because if there is a match 
 		// it will split into ["", :match:, ""]
 		if (splitMessageText.length == 1)
-			continue
+			continue;
 
 		let lastAppended = messageNode;
 		for (let messagePart of splitMessageText) {
 			if (messagePart == "")
 				continue;
 
-			let emojiString = "";
+			let emojiString = undefined;
 			if (splitRegex.test(messagePart)) {
 				emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
 			}
 
-			if (emojiString != "" && baseEmojiMap.has(emojiString)) {
+			let url = undefined;
+			if (emojiString != undefined) {
+				if (baseEmojiMap.has(emojiString)) {
+					url = baseEmojiMap.get(emojiString);
+				}
+				else if (emojiStringTranslations.has(emojiString)) {
+					url = emojiStringTranslations.get(emojiString);
+				}
+			}
+
+			if (emojiString != undefined && url != undefined) {
 				console.log("Replacing " + emojiString);
 				let newChild = document.createElement("img");
 				newChild.src = baseEmojiMap.get(emojiString);
@@ -125,34 +137,76 @@ function updateImages() {
 
 		messageNode.remove();
 	}
+}
+
+
+// http://www.javascriptkit.com/dhtmltutors/treewalker2.shtml
+// https://stackoverflow.com/a/10730777/1890288
+function textNodesUnder(root) {
+	function nodeFilter(node) {
+		// need span's parent to be a div so that we don't take the hidden name tag
+		if (node.parentNode.tagName == "SPAN" &&
+			(node.parentNode.parentNode.tagName == "DIV" || node.parentNode.parentNode.tagName == "SPAN") &&
+			node.textContent != "")
+			return NodeFilter.FILTER_ACCEPT;
+		else
+			return NodeFilter.FILTER_SKIP;
+	}
+
+	let node;
+	let nodes = [];
+	let walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, nodeFilter, false);
+	while (node = walker.nextNode()) {
+		nodes.push(node);
+	}
+	return nodes;
+}
+
+function resolveLatestMessage() {
+	observer.disconnect();
+	console.log("Resolving latest message.");
+
+	// A list of the actual messages
+	let messageNodeList = []
+	messageNodeList.push(...textNodesUnder[messageElements[messageElements.length - 1]]);
+	console.log(messageNodeList);
+	resolveMessageNodeList(messageNodeList);
 
 	let container = document.querySelector(getContainerSelector());
-	// console.log(container);
 	observer.observe(container, observerConfig);
 }
 
+// Try to resolve all emoji strings
+function resolveAll() {
+	observer.disconnect();
+	console.log("Resolving all.");
+
+	// A list of the actual messages
+	let messageNodeList = [];
+	for (let i = 0; i < messageElements.length; ++i) {
+		messageNodeList.push(...textNodesUnder(messageElements[i]));
+	}
+
+	resolveMessageNodeList(messageNodeList);
+
+	let container = document.querySelector(getContainerSelector());
+	observer.observe(container, observerConfig);
+}
+
+function observeHandler() {
+	console.log(messageElements);
+}
+
+function isMessenger() {
+	return document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages");
+}
+
 function getContainerSelector() {
-	if (document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages")) {
-		return messengerContainerSelector;
-	}
-	else if (document.domain == "facebook.com") {
-		return fbContainerSelector;
-	}
-	else {
-		throw Error("Domain invalid");
-	}
+	return isMessenger() ? messengerContainerSelector : fbContainerSelector;
 }
 
 function getMessagesSelector() {
-	if (document.domain == "www.messenger.com" || document.URL.startsWith("https://www.facebook.com/messages")) {
-		return messengerMessagesSelector;
-	}
-	else if (document.domain == "facebook.com") {
-		return fbMessagesSelector;
-	}
-	else {
-		throw Error("Domain invalid");
-	}
+	return isMessenger() ? messengerMessagesSelector : fbMessagesSelector;
 }
 
 function waitForMessagesToLoad(messageSelector, time) {
@@ -163,7 +217,7 @@ function waitForMessagesToLoad(messageSelector, time) {
 
 		observer.disconnect();
 		observer.observe(document.querySelector(getContainerSelector()), observerConfig);
-		updateImages();
+		resolveAll();
 	}
 	else {
 		setTimeout(function() {
