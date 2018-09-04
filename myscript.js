@@ -54,16 +54,6 @@ let messageElement;
 let observer = new MutationObserver(observeHandler);
 let lastMessageId;
 
-// function getAnubhavMichelleImg(emojiString) {
-// 	let xhr = new XMLHttpRequest();
-// 	xhr.open("POST", "localhost:", true);
-// 	xhr.setRequestHeader('Content-Type', 'application/json');
-// 	xhr.send(JSON.stringify({
-// 		emojiNames: ["horse", "123"],
-// 		userId: 
-// 	}));
-// }
-
 function resolveMessageNodeList(messageNodeList) {
 	// JavaScript regexes are stupid:
 	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
@@ -86,56 +76,62 @@ function resolveMessageNodeList(messageNodeList) {
 		}
 	}
 
-	// API CALL GOES HERE
+	let params = {};
+	params["emojiNames"] = ["horse", "123"];
+	params["userId"] = myid;
+	params["recipientFbId"] = "anon";
 
-	for (let messageNode of messageNodeList) {
-		let splitMessageText = messageNode.textContent.split(splitRegex);
+	chrome.runtime.sendMessage(params, function(response) {
+		console.log(response.farewell);
+	});
+	// for (let messageNode of messageNodeList) {
+	// 	let splitMessageText = messageNode.textContent.split(splitRegex);
 
-		// This doesn't miss messages that only contain a single emoji because if there is a match 
-		// it will split into ["", :match:, ""]
-		if (splitMessageText.length == 1)
-			continue;
+	// 	// This doesn't miss messages that only contain a single emoji because if there is a match 
+	// 	// it will split into ["", :match:, ""]
+	// 	if (splitMessageText.length == 1)
+	// 		continue;
 
-		let lastAppended = messageNode;
-		for (let messagePart of splitMessageText) {
-			if (messagePart == "")
-				continue;
+	// 	let lastAppended = messageNode;
+	// 	for (let messagePart of splitMessageText) {
+	// 		if (messagePart == "")
+	// 			continue;
 
-			let emojiString = undefined;
-			if (splitRegex.test(messagePart)) {
-				emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
-			}
+	// 		let emojiString = undefined;
+	// 		if (splitRegex.test(messagePart)) {
+	// 			emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
+	// 		}
 
-			let url = undefined;
-			if (emojiString != undefined) {
-				if (baseEmojiMap.has(emojiString)) {
-					url = baseEmojiMap.get(emojiString);
-				}
-				else if (emojiStringTranslations.has(emojiString)) {
-					url = emojiStringTranslations.get(emojiString);
-				}
-			}
+	// 		let url = undefined;
+	// 		if (emojiString != undefined) {
+	// 			if (baseEmojiMap.has(emojiString)) {
+	// 				url = baseEmojiMap.get(emojiString);
+	// 			}
+	// 			else if (emojiStringTranslations.has(emojiString)) {
+	// 				url = emojiStringTranslations.get(emojiString);
+	// 			}
+	// 		}
 
-			console.log("Emoji string: " + emojiString + ", url: " + url);
-			if (emojiString != undefined && url != undefined) {
-				console.log("Replacing " + emojiString);
-				let newChild = document.createElement("img");
-				newChild.src = baseEmojiMap.get(emojiString);
-				newChild.title = messagePart;
-				newChild.classList.add("slacklineEmoji");
-				lastAppended.parentNode.classList.add("messageSpan");
-				lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
-				lastAppended = newChild;
-			}
-			else {
-				let newChild = document.createTextNode(messagePart);
-				lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
-				lastAppended = newChild;
-			}
-		}
+	// 		console.log("Emoji string: " + emojiString + ", url: " + url);
+	// 		if (emojiString != undefined && url != undefined) {
+	// 			console.log("Replacing " + emojiString);
+	// 			let newChild = document.createElement("img");
+	// 			newChild.src = baseEmojiMap.get(emojiString);
+	// 			newChild.title = messagePart;
+	// 			newChild.classList.add("slacklineEmoji");
+	// 			lastAppended.parentNode.classList.add("messageSpan");
+	// 			lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
+	// 			lastAppended = newChild;
+	// 		}
+	// 		else {
+	// 			let newChild = document.createTextNode(messagePart);
+	// 			lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
+	// 			lastAppended = newChild;
+	// 		}
+	// 	}
 
-		messageNode.remove();
-	}
+	// 	messageNode.remove();
+	// }
 }
 
 
