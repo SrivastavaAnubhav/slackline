@@ -12,18 +12,20 @@ chrome.tabs.onUpdated.addListener(function
 );
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	console.log(request);
+	// console.log("Request:");
+	// console.log(request);
+
 	fetch('http://localhost:28255/lookup_emojis', {
-	    method: 'post',
-	    headers: {
-            "Content-Type": "application/json"
-            // "Content-Type": "application/x-www-form-urlencoded",
-        },
-    	body: JSON.stringify(request)
-    })
-    .then(response => {
-    	console.log(response.json());
-    })
-    .catch(err => console.log(err));
-	sendResponse({farewell: "goodbye"});
+		method: 'post',
+		headers: {
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify(request.params)
+	})
+	.then(response => response.json())
+	.then(response => {
+		sendResponse(response);
+	})
+	.catch(err => sendResponse({}));
+	return true;
 });

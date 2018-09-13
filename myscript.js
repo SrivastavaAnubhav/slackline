@@ -57,7 +57,7 @@ let lastMessageId;
 function resolveMessageNodeList(messageNodeList) {
 	// JavaScript regexes are stupid:
 	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
-	let queryEmojiStrings = []
+	let queryEmojiStrings = [];
 	const splitRegex = /(:[a-z0-9-]+:)/i;
 
 	for (let messageNode of messageNodeList) {
@@ -76,62 +76,75 @@ function resolveMessageNodeList(messageNodeList) {
 		}
 	}
 
-	let params = {};
-	params["emojiNames"] = ["horse", "123"];
-	params["userId"] = myid;
-	params["recipientFbId"] = "anon";
+	console.log("queryEmojiStrings:");
+	console.log(queryEmojiStrings);
 
-	chrome.runtime.sendMessage(params, function(response) {
-		console.log(response.farewell);
-	});
-	// for (let messageNode of messageNodeList) {
-	// 	let splitMessageText = messageNode.textContent.split(splitRegex);
+	function replaceEmojiStrings(customEmojiMap) {
+		console.log("Custom emoji map:");
+		console.log(customEmojiMap);
+		for (let messageNode of messageNodeList) {
+			let splitMessageText = messageNode.textContent.split(splitRegex);
 
-	// 	// This doesn't miss messages that only contain a single emoji because if there is a match 
-	// 	// it will split into ["", :match:, ""]
-	// 	if (splitMessageText.length == 1)
-	// 		continue;
+			// This doesn't miss messages that only contain a single emoji because if there is a match 
+			// it will split into ["", :match:, ""]
+			if (splitMessageText.length == 1)
+				continue;
 
-	// 	let lastAppended = messageNode;
-	// 	for (let messagePart of splitMessageText) {
-	// 		if (messagePart == "")
-	// 			continue;
+			let lastAppended = messageNode;
+			for (let messagePart of splitMessageText) {
+				if (messagePart == "")
+					continue;
 
-	// 		let emojiString = undefined;
-	// 		if (splitRegex.test(messagePart)) {
-	// 			emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
-	// 		}
+				let emojiString = undefined;
+				if (splitRegex.test(messagePart)) {
+					emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
+				}
 
-	// 		let url = undefined;
-	// 		if (emojiString != undefined) {
-	// 			if (baseEmojiMap.has(emojiString)) {
-	// 				url = baseEmojiMap.get(emojiString);
-	// 			}
-	// 			else if (emojiStringTranslations.has(emojiString)) {
-	// 				url = emojiStringTranslations.get(emojiString);
-	// 			}
-	// 		}
+				let url = undefined;
+				if (emojiString != undefined) {
+					if (baseEmojiMap.has(emojiString)) {
+						url = baseEmojiMap.get(emojiString);
+					}
+					else if (customEmojiMap.hasOwnProperty(emojiString)) {
+						url = customEmojiMap[emojiString];
+					}
+				}
 
-	// 		console.log("Emoji string: " + emojiString + ", url: " + url);
-	// 		if (emojiString != undefined && url != undefined) {
-	// 			console.log("Replacing " + emojiString);
-	// 			let newChild = document.createElement("img");
-	// 			newChild.src = baseEmojiMap.get(emojiString);
-	// 			newChild.title = messagePart;
-	// 			newChild.classList.add("slacklineEmoji");
-	// 			lastAppended.parentNode.classList.add("messageSpan");
-	// 			lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
-	// 			lastAppended = newChild;
-	// 		}
-	// 		else {
-	// 			let newChild = document.createTextNode(messagePart);
-	// 			lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
-	// 			lastAppended = newChild;
-	// 		}
-	// 	}
+				console.log("Emoji string: " + emojiString + ", url: " + url);
+				if (emojiString != undefined && url != undefined) {
+					console.log("Replacing " + emojiString);
+					let newChild = document.createElement("img");
+					newChild.src = url;
+					newChild.title = messagePart;
+					newChild.classList.add("slacklineEmoji");
+					lastAppended.parentNode.classList.add("messageSpan");
+					lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
+					lastAppended = newChild;
+				}
+				else {
+					let newChild = document.createTextNode(messagePart);
+					lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
+					lastAppended = newChild;
+				}
+			}
 
-	// 	messageNode.remove();
-	// }
+			messageNode.remove();
+		}
+	}
+
+	if (queryEmojiStrings.length == 0) {
+		console.log("No custom emojis in message(s).");
+		replaceEmojiStrings({});
+	}
+	else {
+		let params = {};
+		params["emojiNames"] = queryEmojiStrings;
+		params["userId"] = myid;
+		let urlParts = window.location.href.split('/');
+		params["recipientFbId"] = urlParts[urlParts.length - 1];
+
+		chrome.runtime.sendMessage({params: params}, replaceEmojiStrings);
+	}
 }
 
 
@@ -163,7 +176,6 @@ function resolveLatestMessage(latestMessage) {
 
 	// A list of the actual messages
 	let messageNodeList = textNodesUnder(latestMessage);
-	console.log(messageNodeList);
 	resolveMessageNodeList(messageNodeList);
 
 	let container = document.querySelector(messengerContainerSelector);
@@ -189,7 +201,7 @@ function observeHandler() {
 	let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.firstChild.lastChild.firstChild;
 
 	if (!lastNode.id) {
-		// Generate random id and only resolve if we haven't already
+		// Generate random id and resolve
 		lastNode.id = "sl_" + Math.random().toString(36).substring(8);
 		lastMessageId = lastNode.id;
 		resolveLatestMessage(lastNode);
