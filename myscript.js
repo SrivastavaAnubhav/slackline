@@ -138,17 +138,29 @@ function resolveMessageNodeList(messageNodeList) {
 	else {
 		let params = {};
 		params["emojiNames"] = queryEmojiStrings;
-		params["userId"] = myid;
-		let urlParts = window.location.href.split('/');
-		params["recipientFbId"] = urlParts[urlParts.length - 1];
+		// Read it using the storage API
 
-		console.log("Trying to resolve the following custom urls");
-		console.log(queryEmojiStrings);
-		// Call from background script to circumvent CSP
-		chrome.runtime.sendMessage({params: params}, customEmojiMap => {
-			console.log("Custom emoji map:");
-			console.log(customEmojiMap);
-			replaceEmojiStrings(customEmojiMap);
+		chrome.storage.local.get(["slacklineUserId"], function(localStorage) {
+			// if (!localStorage.hasOwnProperty("slacklineUserId")) {
+			// 	chrome.storage.local.set({"slacklineUserId": ###############}, function() {
+			// 		console.log("set it");
+			// 		return;
+			// 	});
+			// }
+
+			// Assuming this is here
+			params["userId"] = localStorage["slacklineUserId"];
+			let urlParts = window.location.href.split('/');
+			params["recipientFbId"] = urlParts[urlParts.length - 1];
+
+			console.log("Trying to resolve the following custom urls");
+			console.log(queryEmojiStrings);
+			// Call from background script to circumvent CSP
+			chrome.runtime.sendMessage({params: params}, customEmojiMap => {
+				console.log("Custom emoji map:");
+				console.log(customEmojiMap);
+				replaceEmojiStrings(customEmojiMap);
+			});
 		});
 	}
 }
