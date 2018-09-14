@@ -59,7 +59,7 @@ function resolveMessageNodeList(messageNodeList) {
 	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
 	let queryEmojiStrings = [];
 	const splitRegex = /(:[a-z0-9-]+:)/i;
-
+	let needToReplace = false;
 	for (let messageNode of messageNodeList) {
 		let splitMessageText = messageNode.textContent.split(splitRegex);
 
@@ -68,6 +68,7 @@ function resolveMessageNodeList(messageNodeList) {
 
 		for (let messagePart of splitMessageText) {
 			if (splitRegex.test(messagePart)) {
+				needToReplace = true;
 				let emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
 				if (!baseEmojiMap.has(emojiString)) {
 					queryEmojiStrings.push(emojiString);
@@ -76,12 +77,7 @@ function resolveMessageNodeList(messageNodeList) {
 		}
 	}
 
-	console.log("queryEmojiStrings:");
-	console.log(queryEmojiStrings);
-
 	function replaceEmojiStrings(customEmojiMap) {
-		console.log("Custom emoji map:");
-		console.log(customEmojiMap);
 		for (let messageNode of messageNodeList) {
 			let splitMessageText = messageNode.textContent.split(splitRegex);
 
@@ -132,7 +128,10 @@ function resolveMessageNodeList(messageNodeList) {
 		}
 	}
 
-	if (queryEmojiStrings.length == 0) {
+	if (!needToReplace) {
+		return;
+	} 
+	else if (queryEmojiStrings.length == 0) {
 		console.log("No custom emojis in message(s).");
 		replaceEmojiStrings({});
 	}
@@ -143,7 +142,14 @@ function resolveMessageNodeList(messageNodeList) {
 		let urlParts = window.location.href.split('/');
 		params["recipientFbId"] = urlParts[urlParts.length - 1];
 
-		chrome.runtime.sendMessage({params: params}, replaceEmojiStrings);
+		console.log("Trying to resolve the following custom urls");
+		console.log(queryEmojiStrings);
+		// Call from background script to circumvent CSP
+		chrome.runtime.sendMessage({params: params}, customEmojiMap => {
+			console.log("Custom emoji map:");
+			console.log(customEmojiMap);
+			replaceEmojiStrings(customEmojiMap);
+		});
 	}
 }
 
@@ -198,16 +204,23 @@ function resolveAll() {
 }
 
 function observeHandler() {
-	let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.firstChild.lastChild.firstChild;
+	// Selecting by nodes that have an id doesn't work for some reason (returns empty)
+	try {
+		let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.firstChild.lastChild.firstChild;
 
-	if (!lastNode.id) {
-		// Generate random id and resolve
-		lastNode.id = "sl_" + Math.random().toString(36).substring(8);
-		lastMessageId = lastNode.id;
-		resolveLatestMessage(lastNode);
+		if (!lastNode.id) {
+			// Generate random id and resolve
+			lastNode.id = "sl_" + Math.random().toString(36).substring(8);
+			lastMessageId = lastNode.id;
+			resolveLatestMessage(lastNode);
+		}
+		else {
+			console.log("Id " + lastNode.id + " seen");
+		}
 	}
-	else {
-		console.log("Id " + lastNode.id + " seen");
+	catch (err) {
+		console.log(err);
+		return;
 	}
 }
 
@@ -222,7 +235,7 @@ function waitForMessagesToLoad(messageSelector, time) {
 	}
 	else {
 		setTimeout(function() {
-			console.log("Searching...");
+			console.log("Waiting for messages to load...");
 			waitForMessagesToLoad(messageSelector, time);
 		}, time);
 	}
