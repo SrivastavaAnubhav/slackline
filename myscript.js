@@ -4,7 +4,7 @@ console.log("SLACKLINE LIVE");
 const observerConfig = {childList: true, subtree: true};
 const messengerContainerSelector = '[aria-label="Messages"]';
 const messengerMessagesSelector = '[aria-label="Messages"]';
-
+const groupIdRegex = RegExp('^[0-9]{16}$');
 
 // Any changes must be duplicated into options.js
 // All keys must be lowercased
@@ -81,7 +81,7 @@ function resolveMessageNodeList(messageNodeList) {
 		for (let messageNode of messageNodeList) {
 			let splitMessageText = messageNode.textContent.split(splitRegex);
 
-			// This doesn't miss messages that only contain a single emoji because if there is a match 
+			// This doesn't miss messages that only contain a single emoji because if there is a match
 			// it will split into ["", :match:, ""]
 			if (splitMessageText.length == 1)
 				continue;
@@ -130,37 +130,27 @@ function resolveMessageNodeList(messageNodeList) {
 
 	if (!needToReplace) {
 		return;
-	} 
+	}
 	else if (queryEmojiStrings.length == 0) {
 		console.log("No custom emojis in message(s).");
 		replaceEmojiStrings({});
 	}
 	else {
-		let params = {};
-		params["emojiNames"] = queryEmojiStrings;
-		// Read it using the storage API
+		// let body = {};
+		// requestBody["emojiNames"] = queryEmojiStrings;
+		let urlParts = window.location.href.split('/');
+		// TODO: do this better
+		let groupId = urlParts[urlParts.length - 1];
+		if (!groupIdRegex.test(groupId))
+			return;
 
-		chrome.storage.local.get(["slacklineUserId"], function(localStorage) {
-			// if (!localStorage.hasOwnProperty("slacklineUserId")) {
-			// 	chrome.storage.local.set({"slacklineUserId": ###############}, function() {
-			// 		console.log("set it");
-			// 		return;
-			// 	});
-			// }
-
-			// Assuming this is here
-			params["userId"] = localStorage["slacklineUserId"];
-			let urlParts = window.location.href.split('/');
-			params["recipientFbId"] = urlParts[urlParts.length - 1];
-
-			console.log("Trying to resolve the following custom urls");
-			console.log(queryEmojiStrings);
-			// Call from background script to circumvent CSP
-			chrome.runtime.sendMessage({params: params}, customEmojiMap => {
-				console.log("Custom emoji map:");
-				console.log(customEmojiMap);
-				replaceEmojiStrings(customEmojiMap);
-			});
+		console.log("Trying to resolve the following custom emoji names");
+		console.log(queryEmojiStrings);
+		// Call from background script to circumvent facebook's CSP
+		chrome.runtime.sendMessage({groupId: groupId}, customEmojiMap => {
+			console.log("Custom emoji map:");
+			console.log(customEmojiMap);
+			replaceEmojiStrings(customEmojiMap);
 		});
 	}
 }

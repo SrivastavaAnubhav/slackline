@@ -12,20 +12,21 @@ chrome.tabs.onUpdated.addListener(function
 );
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	// console.log("Request:");
-	// console.log(request);
+	console.log("Request:");
+	console.log(request);
 
-	fetch('http://localhost:28255/lookup_emojis', {
-		method: 'post',
-		headers: {
-			"Content-Type": "application/json"
-		},
-		body: JSON.stringify(request.params)
-	})
-	.then(response => response.json())
+	fetch('http://ec2-13-52-130-221.us-west-1.compute.amazonaws.com:28255/emoji?groupId=' + request.groupId, {method: 'get'})
 	.then(response => {
-		sendResponse(response);
+		console.log("Received response for request with groupId " + request.groupId);
+		return response.json();
 	})
-	.catch(err => sendResponse({}));
+	.then(response => {
+		console.log(response);
+		sendResponse(response.emojis);
+	})
+	.catch(err => {
+		console.error(err);
+		sendResponse({});
+	});
 	return true;
 });
