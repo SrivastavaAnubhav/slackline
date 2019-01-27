@@ -85,6 +85,9 @@ function resolveMessageNodeList(messageNodeList) {
 			// it will split into ["", :match:, ""]
 			if (splitMessageText.length == 1)
 				continue;
+			let emojiIsOnlyThingInMessage = splitMessageText.length == 3 &&
+											splitMessageText[0] == "" &&
+											splitMessageText[2] == "";
 
 			let lastAppended = messageNode;
 			for (let messagePart of splitMessageText) {
@@ -112,7 +115,7 @@ function resolveMessageNodeList(messageNodeList) {
 					let newChild = document.createElement("img");
 					newChild.src = url;
 					newChild.title = messagePart;
-					newChild.classList.add("slacklineEmoji");
+					newChild.classList.add(emojiIsOnlyThingInMessage ? "slacklineEmojiBig" : "slacklineEmoji");
 					lastAppended.parentNode.classList.add("messageSpan");
 					lastAppended.parentNode.insertBefore(newChild, lastAppended.nextSibling);
 					lastAppended = newChild;

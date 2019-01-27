@@ -3,6 +3,11 @@
 	height: 24px;
 }
 
+.slacklineEmojiBig {
+	width: 60px;
+	height: 60px;
+}
+
 .messageSpan {
 	display: inline-flex;
 	align-items: center;
