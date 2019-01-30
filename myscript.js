@@ -182,6 +182,7 @@ function textNodesUnder(root) {
 }
 
 function resolveLatestMessage(latestMessage) {
+	console.log(latestMessage);
 	observer.disconnect();
 	console.log("Resolving latest message.");
 
@@ -211,11 +212,12 @@ function resolveAll() {
 function observeHandler() {
 	// Selecting by nodes that have an id doesn't work for some reason (returns empty)
 	try {
-		let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.firstChild.lastChild.firstChild;
-
+		//                                        js_2          lastgrp    onlychild  messages  lastingrp
+		let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.lastChild.lastChild;
 		if (!lastNode.id) {
 			// Generate random id and resolve
 			lastNode.id = "sl_" + Math.random().toString(36).substring(8);
+			// Store in global variable
 			lastMessageId = lastNode.id;
 			resolveLatestMessage(lastNode);
 		}
