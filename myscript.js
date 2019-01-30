@@ -182,9 +182,7 @@ function textNodesUnder(root) {
 }
 
 function resolveLatestMessage(latestMessage) {
-	console.log(latestMessage);
 	observer.disconnect();
-	console.log("Resolving latest message.");
 
 	// A list of the actual messages
 	let messageNodeList = textNodesUnder(latestMessage);
@@ -197,7 +195,7 @@ function resolveLatestMessage(latestMessage) {
 // Try to resolve all emoji strings
 function resolveAll() {
 	observer.disconnect();
-	console.log("Resolving all.");
+	console.log("Resolving all messages.");
 
 	// A list of the actual messages
 	let messageNodeList = [];
