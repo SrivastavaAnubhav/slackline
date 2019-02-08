@@ -59,7 +59,7 @@ function resolveMessageNodeList(messageNodeList) {
 	// JavaScript regexes are stupid:
 	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
 	let queryEmojiStrings = [];
-	const splitRegex = /(:[a-z0-9-]+:)/i;
+	const splitRegex = /(:[\\w-]+:)/i;
 	let needToReplace = false;
 	for (let messageNode of messageNodeList) {
 		let splitMessageText = messageNode.textContent.split(splitRegex);
