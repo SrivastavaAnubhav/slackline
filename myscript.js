@@ -6,9 +6,9 @@ const messengerContainerSelector = '[aria-label="Messages"]';
 const messengerMessagesSelector = '[aria-label="Messages"]';
 const groupIdRegex = RegExp('^[0-9]{16}$');
 
-// Any changes must be duplicated into options.js
+// TODO: Move these defaults to backend
 // All keys must be lowercased
-const baseEmojiMap = new Map([
+let emojiCache = new Map([
 	// Slack
 	["party-parrot", "https://ph-files.imgix.net/caf5608a-67ec-4f9f-acb5-db0052c33bed"],
 
@@ -53,48 +53,38 @@ const baseEmojiMap = new Map([
 // A list of nodes, each of which is conversation with a different person
 let messageElement;
 let observer = new MutationObserver(observeHandler);
-let lastMessageId;
 
 function resolveMessageNodeList(messageNodeList) {
 	// JavaScript regexes are stupid:
 	// https://stackoverflow.com/questions/1520800/why-does-a-regexp-with-global-flag-give-wrong-results
-	let queryEmojiStrings = [];
 	const splitRegex = /(:[\w-]+:)/i;
 	let needToReplace = false;
+	let updateCache = false;
 	for (let messageNode of messageNodeList) {
 		let splitMessageText = messageNode.textContent.split(splitRegex);
-
-		if (splitMessageText.length == 1)
-			continue;
 
 		for (let messagePart of splitMessageText) {
 			if (splitRegex.test(messagePart)) {
 				needToReplace = true;
-				let emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
-				if (!baseEmojiMap.has(emojiString)) {
-					queryEmojiStrings.push(emojiString);
+				let emojiName = messagePart.substr(1, messagePart.length - 2).toLowerCase();
+				if (!emojiCache.has(emojiName)) {
+					updateCache = true;
 				}
 			}
 		}
 	}
 
-	function replaceEmojiStrings(customEmojiMap) {
+	// NOTE: This is a nested helper function, not a top-level function
+	function replaceEmojiStrings() {
 		for (let messageNode of messageNodeList) {
 			let splitMessageText = messageNode.textContent.split(splitRegex);
 
-			// This doesn't miss messages that only contain a single emoji because if there is a match
-			// it will split into ["", :match:, ""]
-			if (splitMessageText.length == 1)
-				continue;
 			let emojiIsOnlyThingInMessage = splitMessageText.length == 3 &&
 											splitMessageText[0] == "" &&
 											splitMessageText[2] == "";
 
 			let lastAppended = messageNode;
 			for (let messagePart of splitMessageText) {
-				if (messagePart == "")
-					continue;
-
 				let emojiString = undefined;
 				if (splitRegex.test(messagePart)) {
 					emojiString = messagePart.substr(1, messagePart.length - 2).toLowerCase();
@@ -102,11 +92,8 @@ function resolveMessageNodeList(messageNodeList) {
 
 				let url = undefined;
 				if (emojiString != undefined) {
-					if (baseEmojiMap.has(emojiString)) {
-						url = baseEmojiMap.get(emojiString);
-					}
-					else if (customEmojiMap.hasOwnProperty(emojiString)) {
-						url = customEmojiMap[emojiString];
+					if (emojiCache.has(emojiString)) {
+						url = emojiCache.get(emojiString);
 					}
 				}
 
@@ -135,26 +122,25 @@ function resolveMessageNodeList(messageNodeList) {
 	if (!needToReplace) {
 		return;
 	}
-	else if (queryEmojiStrings.length == 0) {
-		console.log("No custom emojis in message(s).");
-		replaceEmojiStrings({});
+	else if (!updateCache) {
+		console.info("No custom emojis in message(s).");
+		replaceEmojiStrings();
 	}
 	else {
-		// let body = {};
-		// requestBody["emojiNames"] = queryEmojiStrings;
 		let urlParts = window.location.href.split('/');
 		// TODO: do this better
 		let groupId = urlParts[urlParts.length - 1];
 		if (!groupIdRegex.test(groupId))
 			return;
 
-		console.log("Trying to resolve the following custom emoji names");
-		console.log(queryEmojiStrings);
 		// Call from background script to circumvent facebook's CSP
 		chrome.runtime.sendMessage({groupId: groupId}, customEmojiMap => {
-			console.log("Custom emoji map:");
-			console.log(customEmojiMap);
-			replaceEmojiStrings(customEmojiMap);
+			console.info("Custom emoji map:");
+			console.info(customEmojiMap);
+			for (const [emojiName, emojiUrl] of Object.entries(customEmojiMap)) {
+				emojiCache.set(emojiName, emojiUrl);
+			}
+			replaceEmojiStrings();
 		});
 	}
 }
@@ -182,11 +168,15 @@ function textNodesUnder(root) {
 	return nodes;
 }
 
-function resolveLatestMessage(latestMessage) {
+function getLatestMessage() {
+	return messageElement.lastChild.previousSibling.lastChild.firstChild.lastChild.lastChild;
+}
+
+function resolveLatestMessage(message) {
 	observer.disconnect();
 
 	// A list of the actual messages
-	let messageNodeList = textNodesUnder(latestMessage);
+	let messageNodeList = textNodesUnder(message);
 	resolveMessageNodeList(messageNodeList);
 
 	let container = document.querySelector(messengerContainerSelector);
@@ -204,6 +194,10 @@ function resolveAll() {
 
 	resolveMessageNodeList(messageNodeList);
 
+	// Need to set id for latest messasge here so we don't call resolveLatestMessage
+	// immediately after resolving all messages
+	getLatestMessage().id = "sl_" + Math.random().toString(36).substring(8);
+
 	let container = document.querySelector(messengerContainerSelector);
 	observer.observe(container, observerConfig);
 }
@@ -212,16 +206,14 @@ function observeHandler() {
 	// Selecting by nodes that have an id doesn't work for some reason (returns empty)
 	try {
 		//                                        js_2          lastgrp    onlychild  messages  lastingrp
-		let lastNode = messageElement.lastChild.previousSibling.lastChild.firstChild.lastChild.lastChild;
-		if (!lastNode.id) {
+		let latestMessage = getLatestMessage();
+		if (!latestMessage.id) {
 			// Generate random id and resolve
-			lastNode.id = "sl_" + Math.random().toString(36).substring(8);
-			// Store in global variable
-			lastMessageId = lastNode.id;
-			resolveLatestMessage(lastNode);
+			latestMessage.id = "sl_" + Math.random().toString(36).substring(8);
+			resolveLatestMessage(latestMessage);
 		}
 		else {
-			console.log("Id " + lastNode.id + " seen");
+			console.log("Id " + latestMessage.id + " seen");
 		}
 	}
 	catch (err) {
@@ -234,9 +226,6 @@ function waitForMessagesToLoad(messageSelector, time) {
 	messageElement = document.querySelector(messageSelector);
 	if (messageElement != null) {
 		console.log("Messages loaded.");
-
-		observer.disconnect();
-		observer.observe(document.querySelector(messengerContainerSelector), observerConfig);
 		resolveAll();
 	}
 	else {
