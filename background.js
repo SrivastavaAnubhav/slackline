@@ -15,7 +15,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	console.log("Request:");
 	console.log(request);
 
-	fetch('http://ec2-13-52-130-221.us-west-1.compute.amazonaws.com:28255/emoji?groupId=' + request.groupId, {method: 'get'})
+	fetch('http://13.52.130.221:28255/emoji?groupId=' + request.groupId, {method: 'get'})
 	.then(response => {
 		console.log("Received response for request with groupId " + request.groupId);
 		return response.json();
